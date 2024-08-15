@@ -1,3 +1,4 @@
-from app.services.FilterProcessService import build_filer_process_from_file
+from app.services.FilterProcessService import FilterProcessService
 
-print(build_filer_process_from_file("done/test.txt"))
+service = FilterProcessService()
+service.process()

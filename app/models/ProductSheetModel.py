@@ -1,5 +1,6 @@
 from typing import List, Dict
 
+
 class ProductSheetModel:
     def __init__(self, product_spreadsheets: str, product_sheet_name: str, headers: List[str]):
         self.product_spreadsheets = product_spreadsheets
