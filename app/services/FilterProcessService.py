@@ -1,3 +1,4 @@
+import glob
 import os
 
 import gspread
@@ -191,7 +192,7 @@ class FilterProcessService:
                 identifier_col = start_col_offset + len(spreadsheet_info.headers)
                 identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values), identifier_col)}"
                 des_sheet.format(identifier_range, {"wrapStrategy": "CLIP"})
-        return "Filter OK"
+        return True
 
     def get_all_sheets(self, spreadsheet_id):
         spreadsheet = self.gc.open_by_key(spreadsheet_id)
@@ -218,13 +219,25 @@ class FilterProcessService:
         header_row = [col for col in header_row if col]
         return header_row
 
-    def process(self):
-        #load all payload from files
-        path = "done/test.txt"
+    def processSingle(self, path):
+        # load all payload from files
         payload = build_filer_process_from_file(path)
 
-        #process the payload
-        response = self.filter_and_transfer_data(payload.product_spreadsheets, payload.payment_spreadsheet, payload.payment_sheet_name)
+        # process the payload
+        response = self.filter_and_transfer_data(payload.product_spreadsheets, payload.payment_spreadsheet,
+                                                 payload.payment_sheet_name)
 
-        print(response)
+        if response:
+            # move the file to done folder
+            done_filename = path.split("/")[1].split(".")[0] + "_done.txt"
+            os.rename(path, done_filename)
+            print("Done")
+            return True
+        print("Failed")
+        return False
 
+    def processMultiple(self):
+        # load all payload files from pending folder
+        pending_files = glob.glob("pending/*.txt")
+        for path in pending_files:
+            self.processSingle(path)
