@@ -219,6 +219,44 @@ class FilterProcessService:
         header_row = [col for col in header_row if col]
         return header_row
 
+    def format_status_column(self, spreadsheet_id, sheet_id):
+        spreadsheet = self.gc.open_by_key(spreadsheet_id)
+        sheet = spreadsheet.get_worksheet_by_id(sheet_id)
+
+        header_row = 3  # assuming the first three rows are notes
+        headers = sheet.row_values(header_row)
+        status_col = headers.index("Trạng thái") + 1  # gspread is 1-indexed
+
+        # Set data validation (dropdown list) in the "Trạng thái" column
+        validation_rule = {
+            "requests": [
+                {
+                    "setDataValidation": {
+                        "range": {
+                            "sheetId": sheet.id,
+                            "startRowIndex": header_row,  # start from header_row (0-indexed)
+                            "endRowIndex": sheet.row_count,  # until the last row
+                            "startColumnIndex": status_col - 1,  # 0-indexed
+                            "endColumnIndex": status_col  # 0-indexed
+                        },
+                        "rule": {
+                            "condition": {
+                                "type": "ONE_OF_LIST",
+                                "values": [
+                                    {"userEnteredValue": "paid"},
+                                    {"userEnteredValue": "unpaid"}
+                                ]
+                            },
+                            "showCustomUi": True
+                        }
+                    }
+                }
+            ]
+        }
+
+        # Apply the validation rule to the sheet
+        sheet.batch_update(validation_rule)
+
     def processSingle(self, path):
         # load all payload from files
         payload = build_filer_process_from_file(path)
