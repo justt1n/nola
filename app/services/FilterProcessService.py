@@ -219,7 +219,7 @@ class FilterProcessService:
         header_row = [col for col in header_row if col]
         return header_row
 
-    def format_status_column(self, spreadsheet_id, sheet_id):
+    def format_status_column(self, spreadsheet_id, sheet_id, range):
         spreadsheet = self.gc.open_by_key(spreadsheet_id)
         sheet = spreadsheet.get_worksheet_by_id(sheet_id)
 
