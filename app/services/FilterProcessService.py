@@ -123,6 +123,7 @@ class FilterProcessService:
         return ranges
 
     def filter_and_transfer_data(self, src_spreadsheets, des_spreadsheet_id, des_sheet_name):
+        print("Start filtering and transferring data")
         des_spreadsheet = self.gc.open_by_key(des_spreadsheet_id)
         des_sheet = des_spreadsheet.worksheet(des_sheet_name)
         des_sheet.clear()
