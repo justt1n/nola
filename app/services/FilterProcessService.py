@@ -267,7 +267,7 @@ class FilterProcessService:
         print("Filter Completed")
         if response:
             # move the file to done folder
-            done_filename = os.path.join('app', 'done', os.path.basename(path))
+            done_filename = os.path.join('done', os.path.basename(path))
             os.rename(path, done_filename)
             print("Done")
             return True
