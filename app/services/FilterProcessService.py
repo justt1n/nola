@@ -12,7 +12,7 @@ def build_filer_process_from_file(path: str):
     if not os.path.exists(path):
         return
     txt = ""
-    with open(path, 'r') as file:
+    with open(path, 'r', encoding='utf-8') as file:
         txt = file.read()
     lines = txt.strip().split('\n')
 
