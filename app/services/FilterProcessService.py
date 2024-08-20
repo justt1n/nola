@@ -264,11 +264,11 @@ class FilterProcessService:
         # process the payload
         response = self.filter_and_transfer_data(payload.product_spreadsheets, payload.payment_spreadsheet,
                                                  payload.payment_sheet_name)
-
+        print("Filter Completed")
         if response:
             # move the file to done folder
-            done_filename = path.split(".")[0] + "_done.txt"
-            os.rename("app/done/", done_filename)
+            done_filename = os.path.join('app', 'done', os.path.basename(path))
+            os.rename(path, done_filename)
             print("Done")
             return True
         print("Failed")
