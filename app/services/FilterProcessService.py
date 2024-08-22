@@ -6,10 +6,15 @@ import gspread
 from google.oauth2 import service_account
 
 from app.models.ProcessModel import FilterProcessModel
-from app.models.ProductSheetModel import ProductSheetModel
+from app.models.SheetModel import ProductSheetModel, PaymentSheetModel
 
 
 def build_filer_process_from_file(path: str):
+    def getElementsFromLine(line: str, have_colon=True):
+        if not have_colon:
+            return line.strip()
+        return line.split(":", 1)[1].strip()
+
     if not os.path.exists(path):
         return
     txt = ""
@@ -18,23 +23,30 @@ def build_filer_process_from_file(path: str):
     lines = txt.strip().split('\n')
 
     # First two lines are for payment spreadsheet and sheet name
-    payment_spreadsheet = lines[0].split(":", 1)[1].strip().split("/")[5]
-    payment_sheet_name = lines[1].split(":", 1)[1].strip()
-
+    payment_spreadsheet_id = getElementsFromLine(lines[0]).split("/")[5]
+    payment_sheet_name = getElementsFromLine(lines[1])
+    header_row_index = int(getElementsFromLine(lines[2], False))
+    payment_spreadsheet = PaymentSheetModel(payment_spreadsheet_id, payment_sheet_name, header_row_index)
     product_spreadsheets = {}
 
     # Remaining lines should come in groups of three
-    index = 1
-    for i in range(2, len(lines), 3):
-        product_spreadsheet = lines[i].split(":", 1)[1].strip().split("/")[5]
-        product_sheet_name = lines[i + 1].split(":", 1)[1].strip()
-        headers = [header.strip() for header in lines[i + 2].split(":", 1)[1].split(",")]
 
+    index = 1
+    for i in range(3, len(lines), 4):
+        # skip the blank line
+        if not lines[i]:
+            index += 1
+            continue
+        product_spreadsheet = getElementsFromLine(lines[i])
+        product_sheet_name = getElementsFromLine(lines[i + 1])
+        headers = [header.strip() for header in getElementsFromLine(lines[i + 2]).split(",")]
+        header_row_index = int(getElementsFromLine(lines[i + 3], False))
         # Use the index as the key
-        product_spreadsheets[str(index)] = ProductSheetModel(product_spreadsheet, product_sheet_name, headers)
+        product_spreadsheets[str(index)] = ProductSheetModel(product_spreadsheet, product_sheet_name, headers,
+                                                             header_row_index)
         index += 1
 
-    return FilterProcessModel(product_spreadsheets, payment_spreadsheet, payment_sheet_name)
+    return FilterProcessModel(product_spreadsheets, payment_spreadsheet)
 
 
 def indices_to_cell(indices):
@@ -123,7 +135,10 @@ class FilterProcessService:
 
         return ranges
 
-    def filter_and_transfer_data(self, src_spreadsheets, des_spreadsheet_id, des_sheet_name):
+    def filter_and_transfer_data(self, src_spreadsheets: ProductSheetModel, des_spreadsheets: PaymentSheetModel):
+        des_spreadsheet_id = des_spreadsheets.payment_spreadsheet
+        des_sheet_name = des_spreadsheets.payment_sheet_name
+        header_row_index = des_spreadsheets.header_row_index
         print("Start filtering and transferring data")
         des_spreadsheet = self.gc.open_by_key(des_spreadsheet_id)
         des_sheet = des_spreadsheet.worksheet(des_sheet_name)
@@ -150,7 +165,7 @@ class FilterProcessService:
             start_row, start_col = gspread.utils.a1_to_rowcol(start_cell)
 
             # Extract header row from the detected start_row
-            header_row = values[3]
+            header_row = values[header_row_index - 1]
 
             try:
                 # Ensure all columns exist in the header row
@@ -268,7 +283,7 @@ class FilterProcessService:
                                                  payload.payment_sheet_name)
         print("Filter Completed")
         if response:
-            #rename it to name + datetime like file.txt to file_20240822183400.txt
+            # rename it to name + datetime like file.txt to file_20240822183400.txt
             os.rename(path, path.replace(".txt", f"_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.txt"))
             print("Done")
             return True
