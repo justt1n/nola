@@ -1,3 +1,4 @@
+import datetime
 import glob
 import os
 
@@ -267,9 +268,8 @@ class FilterProcessService:
                                                  payload.payment_sheet_name)
         print("Filter Completed")
         if response:
-            # move the file to done folder
-            done_filename = os.path.join('done', os.path.basename(path))
-            os.rename(path, done_filename)
+            #rename it to name + datetime like file.txt to file_20240822183400.txt
+            os.rename(path, path.replace(".txt", f"_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt"))
             print("Done")
             return True
         print("Failed")
