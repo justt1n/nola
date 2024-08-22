@@ -269,7 +269,7 @@ class FilterProcessService:
         print("Filter Completed")
         if response:
             #rename it to name + datetime like file.txt to file_20240822183400.txt
-            os.rename(path, path.replace(".txt", f"_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt"))
+            os.rename(path, path.replace(".txt", f"_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.txt"))
             print("Done")
             return True
         print("Failed")
