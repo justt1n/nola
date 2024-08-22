@@ -1,6 +1,7 @@
 import datetime
 import glob
 import os
+import re
 
 import gspread
 from google.oauth2 import service_account
@@ -292,7 +293,10 @@ class FilterProcessService:
         print("Filter Completed")
         if response:
             # rename it to name + datetime like file.txt to file_20240822183400.txt
-            os.rename(path, path.replace(".txt", f"_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.txt"))
+            filename, extension = os.path.splitext(path)
+            filename = re.sub(r'_[0-9]{14}$', '', filename)
+            new_filename = f"{filename}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}{extension}"
+            os.rename(path, new_filename)
             print("Done")
             return True
         print("Failed")

@@ -7,7 +7,6 @@ product_sheet_name: Product1
 headers: Thời gian, Sản phẩm, Đơn giá, Ví trả, Trạng thái
 4
 
-
 product_spreadsheets: https://docs.google.com/spreadsheets/d/1IBaJugViSUO36_rNCKfOV1V5D-9YPSoD-vp6CN8GfY8/edit?gid=206955284#gid=206955284
 product_sheet_name: Product2
 headers: Thời gian, Sản phẩm, Đơn giá, Ví trả, Trạng thái
