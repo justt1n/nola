@@ -9,7 +9,7 @@ class ProductSheetModel:
         self.header_row_index = header_row_index
 
     def __repr__(self):
-        return f"Spreadsheet(product_spreadsheets='{self.product_spreadsheets}', product_sheet_name='{self.product_sheet_name}', headers={self.headers})"
+        return f"Spreadsheet(product_spreadsheets='{self.product_spreadsheets}', product_sheet_name='{self.product_sheet_name}', headers={self.headers}, header_row_index={self.header_row_index})"
 
 
 class PaymentSheetModel:

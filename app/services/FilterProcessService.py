@@ -11,7 +11,7 @@ from app.models.SheetModel import ProductSheetModel, PaymentSheetModel
 
 def build_filer_process_from_file(path: str):
     def getElementsFromLine(line: str, have_colon=True):
-        if not have_colon:
+        if have_colon == False:
             return line.strip()
         return line.split(":", 1)[1].strip()
 
@@ -32,19 +32,28 @@ def build_filer_process_from_file(path: str):
     # Remaining lines should come in groups of three
 
     index = 1
-    for i in range(3, len(lines), 4):
-        # skip the blank line
-        if not lines[i]:
-            index += 1
-            continue
-        product_spreadsheet = getElementsFromLine(lines[i])
+    i = 3
+    while i < len(lines):
+        # Skip all consecutive blank lines
+        while i < len(lines) and not lines[i].strip():
+            i += 1
+
+        # Check if we've reached the end of the file
+        if i >= len(lines):
+            break
+
+        # Process groups of four lines
+        product_spreadsheet = getElementsFromLine(lines[i]).split("/")[5]
         product_sheet_name = getElementsFromLine(lines[i + 1])
         headers = [header.strip() for header in getElementsFromLine(lines[i + 2]).split(",")]
         header_row_index = int(getElementsFromLine(lines[i + 3], False))
+
         # Use the index as the key
         product_spreadsheets[str(index)] = ProductSheetModel(product_spreadsheet, product_sheet_name, headers,
                                                              header_row_index)
+
         index += 1
+        i += 4
 
     return FilterProcessModel(product_spreadsheets, payment_spreadsheet)
 
@@ -138,7 +147,7 @@ class FilterProcessService:
     def filter_and_transfer_data(self, src_spreadsheets: ProductSheetModel, des_spreadsheets: PaymentSheetModel):
         des_spreadsheet_id = des_spreadsheets.payment_spreadsheet
         des_sheet_name = des_spreadsheets.payment_sheet_name
-        header_row_index = des_spreadsheets.header_row_index
+
         print("Start filtering and transferring data")
         des_spreadsheet = self.gc.open_by_key(des_spreadsheet_id)
         des_sheet = des_spreadsheet.worksheet(des_sheet_name)
@@ -147,7 +156,7 @@ class FilterProcessService:
 
         for index, spreadsheet_info in src_spreadsheets.items():
             product_spreadsheet = self.gc.open_by_key(spreadsheet_info.product_spreadsheets)
-
+            header_row_index = spreadsheet_info.header_row_index
             product_sheet = product_spreadsheet.worksheet(spreadsheet_info.product_sheet_name)
             values = product_sheet.get_all_values()
             values = [row for row in values if any(cell.strip() for cell in row)]
@@ -198,8 +207,8 @@ class FilterProcessService:
                     raise ValueError(
                         f"End column {end_col} exceeds the sheet's column count {des_sheet.col_count}")
 
-                start_cell = gspread.utils.rowcol_to_a1(1, start_col_offset)
-                end_cell = gspread.utils.rowcol_to_a1(len(filtered_values), end_col)
+                start_cell = gspread.utils.rowcol_to_a1(des_spreadsheets.header_row_index, start_col_offset)
+                end_cell = gspread.utils.rowcol_to_a1(len(filtered_values) + des_spreadsheets.header_row_index, end_col)
                 cell_range = f"{start_cell}:{end_cell}"
 
                 des_sheet.update(cell_range, filtered_values)
@@ -207,7 +216,7 @@ class FilterProcessService:
 
                 # Set the identifier column to wrap text to clip
                 identifier_col = start_col_offset + len(spreadsheet_info.headers)
-                identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values), identifier_col)}"
+                identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values) + des_spreadsheets.header_row_index, identifier_col)}"
                 des_sheet.format(identifier_range, {"wrapStrategy": "CLIP"})
         return True
 
@@ -279,8 +288,7 @@ class FilterProcessService:
         payload = build_filer_process_from_file(path)
 
         # process the payload
-        response = self.filter_and_transfer_data(payload.product_spreadsheets, payload.payment_spreadsheet,
-                                                 payload.payment_sheet_name)
+        response = self.filter_and_transfer_data(payload.product_spreadsheets, payload.payment_spreadsheet)
         print("Filter Completed")
         if response:
             # rename it to name + datetime like file.txt to file_20240822183400.txt
