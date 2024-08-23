@@ -160,6 +160,7 @@ class FilterProcessService:
         note_cell_range = f"{start_cell}:{end_cell}"
         note_des_value = des_sheet.get_values(note_cell_range)
         des_sheet.clear()
+        des_sheet.update(note_cell_range, note_des_value)
 
         col_offset = 0  # Column offset between data ranges
 
@@ -220,7 +221,6 @@ class FilterProcessService:
                 end_cell = gspread.utils.rowcol_to_a1(len(filtered_values) + des_spreadsheets.header_row_index, end_col)
                 cell_range = f"{start_cell}:{end_cell}"
 
-                des_sheet.update(note_cell_range, note_des_value)
                 des_sheet.update(cell_range, filtered_values)
                 col_offset += len(spreadsheet_info.headers) + 1 + 2  # Horizontal spacing between datasets
 
