@@ -94,17 +94,17 @@ class FilterProcessService:
         creds = get_google_credentials()
         self.gc = gspread.authorize(creds)
 
-    def detect_ranges(self, spreadsheet_id, sheet_id):
+    def detect_ranges(self, spreadsheet_id, sheet_id, start_row):
         spreadsheet = self.gc.open_by_key(spreadsheet_id)
         sheet = spreadsheet.get_worksheet_by_id(sheet_id)
 
         max_rows = sheet.row_count
         max_cols = sheet.col_count
 
-        values = sheet.get_all_values()
+        values = sheet.get_all_values()[start_row:]
 
         non_empty_cells = set()
-        for r_idx, row in enumerate(values):
+        for r_idx, row in enumerate(values, start=start_row):
             for c_idx, cell in enumerate(row):
                 if cell:
                     non_empty_cells.add((r_idx, c_idx))
@@ -135,7 +135,7 @@ class FilterProcessService:
             return None
 
         ranges = []
-        for r_idx in range(max_rows):
+        for r_idx in range(start_row, max_rows):
             for c_idx in range(max_cols):
                 range_coords = find_range(r_idx, c_idx)
                 if range_coords:
@@ -159,13 +159,13 @@ class FilterProcessService:
             product_spreadsheet = self.gc.open_by_key(spreadsheet_info.product_spreadsheets)
             header_row_index = spreadsheet_info.header_row_index
             product_sheet = product_spreadsheet.worksheet(spreadsheet_info.product_sheet_name)
-            values = product_sheet.get_all_values()
+            values = product_sheet.get_all_values()[header_row_index-1:]
             values = [row for row in values if any(cell.strip() for cell in row)]
             if not values:
                 continue
 
             # Detect the starting row and column using detect_ranges
-            detected_ranges = self.detect_ranges(spreadsheet_info.product_spreadsheets, product_sheet.id)
+            detected_ranges = self.detect_ranges(spreadsheet_info.product_spreadsheets, product_sheet.id, 20)
             if not detected_ranges:
                 continue
 
@@ -175,7 +175,7 @@ class FilterProcessService:
             start_row, start_col = gspread.utils.a1_to_rowcol(start_cell)
 
             # Extract header row from the detected start_row
-            header_row = values[header_row_index - 1]
+            header_row = values[0]
 
             try:
                 # Ensure all columns exist in the header row
