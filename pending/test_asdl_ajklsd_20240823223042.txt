@@ -1,6 +1,5 @@
-payment_spreadsheets: https://docs.google.com/spreadsheets/d/1Mz_fwMlT6cS7sNBkoE1AUaGhjLE9f3XYhoAzy9X9dro/edit?gid=734451606#gid=734451606
-payment_sheet_name: Payment1
-6
+payment_spreadsheets: https://docs.google.com/spreadsheets/d/1bw5QTDKv742F8THTZ9oGors02ICZSovJq30JKKDsvbc/edit?gid=0#gid=0
+payment_sheet_name: Payment Hoa
 
 product_spreadsheets: https://docs.google.com/spreadsheets/d/1IBaJugViSUO36_rNCKfOV1V5D-9YPSoD-vp6CN8GfY8/edit?gid=206955284#gid=206955284
 product_sheet_name: Product1

@@ -5,6 +5,7 @@ import re
 
 import gspread
 from google.oauth2 import service_account
+from gspread.utils import rowcol_to_a1
 
 from app.models.ProcessModel import FilterProcessModel
 from app.models.SheetModel import ProductSheetModel, PaymentSheetModel
@@ -26,7 +27,7 @@ def build_filer_process_from_file(path: str):
     # First two lines are for payment spreadsheet and sheet name
     payment_spreadsheet_id = getElementsFromLine(lines[0]).split("/")[5]
     payment_sheet_name = getElementsFromLine(lines[1])
-    header_row_index = int(getElementsFromLine(lines[2], False))
+    header_row_index = 5
     payment_spreadsheet = PaymentSheetModel(payment_spreadsheet_id, payment_sheet_name, header_row_index)
     product_spreadsheets = {}
 
@@ -101,7 +102,7 @@ class FilterProcessService:
         max_rows = sheet.row_count
         max_cols = sheet.col_count
 
-        values = sheet.get_all_values()[start_row:]
+        values = sheet.get_all_values()
 
         non_empty_cells = set()
         for r_idx, row in enumerate(values, start=start_row):
@@ -145,6 +146,36 @@ class FilterProcessService:
 
         return ranges
 
+    import gspread
+    from gspread.utils import rowcol_to_a1
+
+    def detect_header_range(self, spreadsheet_id, sheet_id, headers):
+        # Open the spreadsheet and get the worksheet
+        spreadsheet = self.gc.open_by_key(spreadsheet_id)
+        sheet = spreadsheet.get_worksheet_by_id(sheet_id)
+
+        max_rows = sheet.row_count
+        max_cols = sheet.col_count
+
+        values = sheet.get_all_values()
+
+        def find_headers_row():
+            for r_idx in range(1, max_rows):
+                row = values[r_idx]
+                if all(header in row for header in headers):
+                    return r_idx, row.index(headers[0]), row.index(headers[-1])
+            return None, None, None
+
+        # Locate the row and columns containing the headers
+        header_row, min_col, max_col = find_headers_row()
+
+        if header_row is not None:
+            # Convert the detected header range to A1 notation
+            range_str = f"{sheet.title}!{rowcol_to_a1(header_row + 1, min_col + 1)}:{rowcol_to_a1(header_row + 1, max_col + 1)}"
+            return range_str
+        else:
+            return None
+
     def filter_and_transfer_data(self, src_spreadsheets: ProductSheetModel, des_spreadsheets: PaymentSheetModel):
         des_spreadsheet_id = des_spreadsheets.payment_spreadsheet
         des_sheet_name = des_spreadsheets.payment_sheet_name
@@ -156,7 +187,7 @@ class FilterProcessService:
         # Clear the destination sheet before transferring data
         max_cols = des_sheet.col_count
         start_cell = gspread.utils.rowcol_to_a1(1, 1)
-        end_cell = gspread.utils.rowcol_to_a1(des_spreadsheets.header_row_index, max_cols)
+        end_cell = gspread.utils.rowcol_to_a1(des_spreadsheets.header_row_index-1, max_cols)
         note_cell_range = f"{start_cell}:{end_cell}"
         note_des_value = des_sheet.get_values(note_cell_range)
         des_sheet.clear()
@@ -172,19 +203,18 @@ class FilterProcessService:
             values = [row for row in values if any(cell.strip() for cell in row)]
             if not values:
                 continue
+            header_row = values[0]
 
             # Detect the starting row and column using detect_ranges
-            detected_ranges = self.detect_ranges(spreadsheet_info.product_spreadsheets, product_sheet.id, 20)
+            detected_ranges = self.detect_header_range(spreadsheet_info.product_spreadsheets, product_sheet.id, header_row)
             if not detected_ranges:
                 continue
 
             # Get the starting cell of the first (and only) range
-            start_cell, end_cell = detected_ranges[0].split(":")
+            start_cell, end_cell = detected_ranges.split(":")
             start_cell = start_cell.split("!")[1]
             start_row, start_col = gspread.utils.a1_to_rowcol(start_cell)
 
-            # Extract header row from the detected start_row
-            header_row = values[0]
 
             try:
                 # Ensure all columns exist in the header row
@@ -203,8 +233,8 @@ class FilterProcessService:
                 if 'unpaid' in row:
                     filtered_row = [row[idx] for idx in col_indices]
                     # Calculate begin_col and end_col based on the current col_offset
-                    begin_col = gspread.utils.rowcol_to_a1(1, col_offset + 2)
-                    end_col = gspread.utils.rowcol_to_a1(1, col_offset + 1 + len(spreadsheet_info.headers) + 1)
+                    begin_col = gspread.utils.rowcol_to_a1(5, col_offset + 2)
+                    end_col = gspread.utils.rowcol_to_a1(5, col_offset + 1 + len(spreadsheet_info.headers) + 1)
                     # Add identifier information into a cell separated by "#"
                     identifier = f"{spreadsheet_info.product_spreadsheets}#{spreadsheet_info.product_sheet_name}#{begin_col}:{end_col}#{indices_to_cell((row_idx, status_col_index))}"
                     filtered_row.append(identifier)
